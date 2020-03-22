@@ -9,27 +9,26 @@
 import UIKit
 import RealmSwift
 
-class CategoryViewController: UITableViewController {
+class CategoryViewController: SwipeTableViewController {
     
     let realm = try! Realm()
-    var categories = [Category]()
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    var categories: Results<Category>?
 
     override func viewDidLoad() {
         super.viewDidLoad()
-//    print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
-//        loadCategories()
+        loadCategories()
     }
     
     //MARK: - TableView Datasource Methods
+    
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return categories.count
+        return categories?.count ?? 0
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
-        let category = categories[indexPath.row].name
-        cell.textLabel?.text = category
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
+        cell.textLabel?.text = categories?[indexPath.row].name
+        cell.accessoryType = .disclosureIndicator
         return cell
     }
     
@@ -42,8 +41,28 @@ class CategoryViewController: UITableViewController {
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         let destinationVC = segue.destination as! TodoListViewController
         if let indexPath = tableView.indexPathForSelectedRow {
-            destinationVC.category = categories[indexPath.row]
+            destinationVC.category = categories?[indexPath.row]
         }
+    }
+    
+    //MARK: - Add Data
+    
+    @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
+        var textField = UITextField()
+        let alert = UIAlertController(title: "Add New Category", message: "", preferredStyle: .alert)
+        let action = UIAlertAction(title: "Add", style: .default) { (action) in
+            if let text = textField.text {
+                let newCategory = Category()
+                newCategory.name = text
+                self.save(newCategory)
+            }
+        }
+        alert.addTextField { (alertTextField) in
+            alertTextField.placeholder = "Category Name"
+            textField = alertTextField
+        }
+        alert.addAction(action)
+        present(alert, animated: true, completion: nil)
     }
     
     //MARK: - Save Data
@@ -59,38 +78,25 @@ class CategoryViewController: UITableViewController {
         tableView.reloadData()
     }
     
-    //MARK: - Add Data
-    
-    @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
-        var textField = UITextField()
-        let alert = UIAlertController(title: "Add New Category", message: "", preferredStyle: .alert)
-        let action = UIAlertAction(title: "Add", style: .default) { (action) in
-            if let text = textField.text {
-                let newCategory = Category()
-                newCategory.name = text
-                self.categories.append(newCategory)
-                self.save(newCategory)
-            }
-        }
-        alert.addTextField { (alertTextField) in
-            alertTextField.placeholder = "Category Name"
-            textField = alertTextField
-        }
-        alert.addAction(action)
-        present(alert, animated: true, completion: nil)
-    }
-    
     //MARK: - Load Data
     
-//    func loadCategories(_ request: NSFetchRequest<Category> = Category.fetchRequest()) {
-//        do {
-//            categories = try context.fetch(request)
-//        } catch {
-//            print("Error fetching categories: \(error)")
-//        }
-//        tableView.reloadData()
-//    }
+    func loadCategories() {
+        categories = realm.objects(Category.self)
+        tableView.reloadData()
+    }
     
     //MARK: - Delete Data
-
+    
+    override func updateModel(_ index: IndexPath) {
+        if let category = categories?[index.row] {
+            do{
+                try realm.write {
+                    realm.delete(category.items)
+                    realm.delete(category)
+                }
+            } catch {
+                print("Error deleting category: \(error)")
+            }
+        }
+    }
 }
