@@ -8,15 +8,22 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
 class CategoryViewController: SwipeTableViewController {
     
     let realm = try! Realm()
-    var categories: Results<Category>?
+    var categories: Results<Category>? 
 
     override func viewDidLoad() {
         super.viewDidLoad()
         loadCategories()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        guard let navbar = navigationController?.navigationBar else { fatalError("No navbar yet") }
+        navbar.barTintColor = UIColor(hexString: "1D9BF6")
+        navbar.titleTextAttributes = [NSAttributedString.Key.foregroundColor: UIColor(hexString: "FFFFFF")!]
     }
     
     //MARK: - TableView Datasource Methods
@@ -27,7 +34,13 @@ class CategoryViewController: SwipeTableViewController {
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = super.tableView(tableView, cellForRowAt: indexPath)
-        cell.textLabel?.text = categories?[indexPath.row].name
+        if let category = categories?[indexPath.row] {
+            cell.textLabel?.text = category.name
+            if let color = UIColor(hexString: category.color) {
+                cell.backgroundColor = color
+                cell.textLabel?.textColor = ContrastColorOf(color, returnFlat: true)
+            }
+        }
         cell.accessoryType = .disclosureIndicator
         return cell
     }
@@ -36,6 +49,7 @@ class CategoryViewController: SwipeTableViewController {
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         performSegue(withIdentifier: "goToItems", sender: self)
+        tableView.deselectRow(at: indexPath, animated: true)
     }
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
@@ -54,6 +68,7 @@ class CategoryViewController: SwipeTableViewController {
             if let text = textField.text {
                 let newCategory = Category()
                 newCategory.name = text
+                newCategory.color = UIColor.randomFlat().hexValue()
                 self.save(newCategory)
             }
         }

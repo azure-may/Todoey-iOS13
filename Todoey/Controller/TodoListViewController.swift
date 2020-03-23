@@ -8,6 +8,7 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
 class TodoListViewController: SwipeTableViewController {
     
@@ -18,11 +19,26 @@ class TodoListViewController: SwipeTableViewController {
             loadItems()
         }
     }
+    @IBOutlet weak var searchBar: UISearchBar!
     
     override func viewDidLoad() {
         super.viewDidLoad()
     }
-
+    
+    override func viewWillAppear(_ animated: Bool) {
+        if let color = category?.color {
+            title = category!.name
+            guard let navbar = navigationController?.navigationBar else { fatalError("No navbar yet") }
+            if let navbarColor = UIColor(hexString: color) {
+                navbar.barTintColor = navbarColor
+                navbar.tintColor = ContrastColorOf(navbarColor, returnFlat: true)
+                navbar.titleTextAttributes = [NSAttributedString.Key.foregroundColor: ContrastColorOf(navbarColor, returnFlat: true)]
+                searchBar.barTintColor = navbarColor
+                searchBar.searchTextField.backgroundColor = .white
+            }
+        }
+    }
+    
     //MARK: - Tableview Datasource Methods
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -34,6 +50,11 @@ class TodoListViewController: SwipeTableViewController {
         if let item = items?[indexPath.row] {
             cell.textLabel?.text = item.title
             cell.accessoryType = item.done ? .checkmark : .none
+            let percent = CGFloat(indexPath.row)/CGFloat(items!.count)
+            if let color = UIColor(hexString: category!.color)?.darken(byPercentage: percent) {
+                cell.backgroundColor = color
+                cell.textLabel?.textColor = ContrastColorOf(color, returnFlat: true)
+            }
         }
         return cell
     }
